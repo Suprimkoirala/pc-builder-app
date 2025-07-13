@@ -105,6 +105,6 @@ Visit: http://localhost:5173
 
 ```
 
-
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/atultiwari000/pc-builder-app?utm_source=oss&utm_medium=github&utm_campaign=atultiwari000%2Fpc-builder-app&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
 

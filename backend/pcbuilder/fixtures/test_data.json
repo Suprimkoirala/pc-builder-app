@@ -1,0 +1,33 @@
+[
+  {
+    "model": "pcbuilder.category",
+    "pk": 1,
+    "fields": {
+      "name": "CPU",
+      "slug": "cpu",
+      "icon": "cpu-icon"
+    }
+  },
+  {
+    "model": "pcbuilder.vendor",
+    "pk": 1,
+    "fields": {
+      "name": "Intel",
+      "website": "https://www.intel.com ",
+      "logo": "https://example.com/intel-logo.png "
+    }
+  },
+  {
+    "model": "pcbuilder.component",
+    "pk": 1,
+    "fields": {
+      "name": "Intel Core i9-13900K",
+      "description": "16-core 3.0GHz CPU",
+      "price": "599.99",
+      "category": 1,
+      "vendor": 1,
+      "image": "https://example.com/i9-13900k.jpg ",
+      "specs": {"cores": 16, "socket": "LGA1700", "tdp": "150W"}
+    }
+  }
+]

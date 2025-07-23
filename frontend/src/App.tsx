@@ -1,24 +1,56 @@
-import Header from "./components/Header";
-import Hero from "./components/Hero";
-import PCBuilder from "./components/PCBuilder";
-import AssemblyService from "./components/AssemblyService";
-import PastBuilds from "./components/PastBuild";
-import DIYResources from "./components/DIYResources";
-import Footer from "./components/Footer";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { useAuthStore } from "./store/authStore";
+import LandingPage from "./pages/LandingPage";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
+import BuilderPage from "./pages/BuilderPage";
+import ComponentVisualizerPage from "./pages/ComponentVisualizer";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
+  const { isAuthenticated } = useAuthStore();
+
   return (
-    <div>
-      <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-teal-800 to-green-900">
-        <Header />
-        <Hero />
-        <PCBuilder />
-        <AssemblyService />
-        <PastBuilds />
-        <DIYResources />
-        <Footer />
+    <Router>
+      <div className="min-h-screen bg-black text-white">
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route
+            path="/login"
+            element={
+              isAuthenticated ? <Navigate to="/builder" /> : <LoginPage />
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              isAuthenticated ? <Navigate to="/builder" /> : <SignupPage />
+            }
+          />
+          <Route
+            path="/builder"
+            element={
+              <ProtectedRoute>
+                <BuilderPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/visualizer"
+            element={
+              <ProtectedRoute>
+                <ComponentVisualizerPage />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
       </div>
-    </div>
+    </Router>
   );
 }
 

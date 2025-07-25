@@ -16,7 +16,8 @@ import { Card } from "../components/ui/card";
 import ComponentModel from "../components/3d/ComponentModel";
 
 const ComponentVisualizerPage = () => {
-  const { user, logout } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
   const { selectedComponents } = useBuilderStore();
   const [selectedCategory, setSelectedCategory] = useState<string>("cpu");
 
@@ -53,7 +54,7 @@ const ComponentVisualizerPage = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <span className="text-emerald-500 ">Welcome, {user?.name}</span>
+            <span className="text-emerald-500 ">Welcome, {user?.username}</span>
             <Button
               variant="ghost"
               onClick={logout}

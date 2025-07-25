@@ -9,11 +9,19 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'password', 'bio', 'avatar', 'is_pro_builder']
         extra_kwargs = {'password': {'write_only': True}}
-    
-    def create(self, validated_data):
-        user = User.objects.create_user(**validated_data)
-        return user
 
+    def create(self, validated_data):
+        bio = validated_data.pop('bio', '')
+        avatar = validated_data.pop('avatar', None)
+        is_pro_builder = validated_data.pop('is_pro_builder', False)
+
+        user = User.objects.create_user(**validated_data)
+        user.bio = bio
+        user.avatar = avatar
+        user.is_pro_builder = is_pro_builder
+        user.save()
+        return user
+    
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category

@@ -1,54 +1,131 @@
 import { create } from "zustand"
+import axios from "axios"
+
+const API_BASE = "http://localhost:8000/api/v1"
 
 interface User {
   id: string
+  username: string
   email: string
-  name: string
 }
 
 interface AuthState {
   user: User | null
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<boolean>
-  signup: (name: string, email: string, password: string) => Promise<boolean>
-  logout: () => void
+  signup: (username: string, email: string, password: string) => Promise<boolean>
+  logout: () => Promise<void>
+  fetchUser: () => Promise<void>
+  tryAutoLogin: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
-  login: async (email: string, password: string) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    // Mock authentication - in real app, validate with backend
-    if (email && password) {
-      const user = {
-        id: "1",
+  login: async (email, password) => {
+    try {
+      const res = await axios.post(`${API_BASE}/login/`, {
         email,
-        name: email.split("@")[0],
-      }
-      set({ user, isAuthenticated: true })
-      return true
-    }
-    return false
-  },
-  signup: async (name: string, email: string, password: string) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+        password,
+      })
+      const { access, refresh } = res.data
+      
+      localStorage.setItem("access", access)
+      localStorage.setItem("refresh", refresh)
 
-    if (name && email && password) {
-      const user = {
-        id: "1",
-        email,
-        name,
-      }
-      set({ user, isAuthenticated: true })
+      await useAuthStore.getState().fetchUser()
       return true
+    } catch (err) {
+      console.error("Login error:", err)
+      return false
     }
-    return false
   },
-  logout: () => {
-    set({ user: null, isAuthenticated: false })
+
+  signup: async (username, email, password) => {
+    try {
+      const res = await axios.post(`${API_BASE}/register/`, {
+        username,
+        email,
+        password,
+      })
+      const { access, refresh } = res.data.tokens
+      const { id, username: uname, email: userEmail } = res.data.user
+
+      localStorage.setItem("access", access)
+      localStorage.setItem("refresh", refresh)
+
+      set({ user: { id, username: uname, email: userEmail }, isAuthenticated: true })
+
+      return true
+    } catch (err) {
+      console.error("Signup error:", err)
+      return false
+    }
+  },
+
+  logout: async () => {
+    try {
+      const refresh = localStorage.getItem("refresh")
+      if (refresh) {
+        await axios.post(`${API_BASE}/logout/`, { refresh }, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access")}`,
+          },
+        })
+      }
+    } catch (err) {
+      console.warn("Logout error:", err)
+    } finally {
+      localStorage.removeItem("access")
+      localStorage.removeItem("refresh")
+      set({ user: null, isAuthenticated: false })
+    }
+  },
+
+  fetchUser: async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/me/`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access")}`,
+        },
+      })
+      
+      useAuthStore.setState({
+        user: res.data,
+        isAuthenticated: true,
+      })
+      
+      const { id, username, email } = res.data
+      set({ user: { id, username, email }, isAuthenticated: true })
+      
+  } catch (err) {
+    console.error("Failed to fetch user:", err)
+    useAuthStore.setState({ user: null, isAuthenticated: false })
+    }
+  },
+
+
+  tryAutoLogin: async () => {
+    const access = localStorage.getItem("access")
+    const refresh = localStorage.getItem("refresh")
+    if (!access || !refresh) return
+
+    try {
+      await useAuthStore.getState().fetchUser()
+    } catch {
+      try {
+        const res = await axios.post(`${API_BASE}/token/refresh/`, {
+          refresh,
+        })
+        const newAccess = res.data.access
+        localStorage.setItem("access", newAccess)
+        await useAuthStore.getState().fetchUser()
+      } catch (refreshError) {
+        console.error("Auto login failed:", refreshError)
+        localStorage.removeItem("access")
+        localStorage.removeItem("refresh")
+      }
+    }
   },
 }))

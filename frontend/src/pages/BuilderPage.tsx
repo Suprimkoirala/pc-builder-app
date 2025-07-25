@@ -21,12 +21,8 @@ import { Card } from "../components/ui/card";
 
 const BuilderPage = () => {
   const { user, logout } = useAuthStore();
-  const {
-    selectedComponents,
-    selectComponent,
-    removeComponent,
-    getTotalPrice,
-  } = useBuilderStore();
+  const { selectedComponents, selectComponent, getTotalPrice } =
+    useBuilderStore();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const categories = [
@@ -94,7 +90,7 @@ const BuilderPage = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <span className="text-gray-300">Welcome, {user?.name}</span>
+            <span className="text-gray-300">Welcome, {user?.username}</span>
             <Link to="/visualizer">
               <Button className="bg-blue-500 hover:bg-blue-600 text-gray-900">
                 <Eye className="w-4 h-4 mr-2" />

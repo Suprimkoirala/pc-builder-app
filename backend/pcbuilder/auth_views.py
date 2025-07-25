@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import login, logout
 from rest_framework_simplejwt.tokens import RefreshToken
-
+from django.contrib.auth import authenticate
 from pcbuilder.models import User
 from .serializers import UserSerializer
 
@@ -57,7 +57,7 @@ class MeView(APIView):
 
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
-    
+
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
@@ -66,26 +66,29 @@ class RegisterView(APIView):
             return Response({
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
-                'user': serializer.data
+                'user': UserSerializer(user).data
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# views.py
+
+from django.contrib.auth import authenticate
+
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
-    
+
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
-        
+
         try:
             user = User.objects.get(email=email)
             if user.check_password(password):
                 refresh = RefreshToken.for_user(user)
-                serializer = UserSerializer(user)
                 return Response({
                     'refresh': str(refresh),
                     'access': str(refresh.access_token),
-                    'user': serializer.data
+                    'user': UserSerializer(user).data
                 })
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
         except User.DoesNotExist:

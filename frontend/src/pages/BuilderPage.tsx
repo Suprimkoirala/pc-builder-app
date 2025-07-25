@@ -74,7 +74,6 @@ const BuilderPage = () => {
         model: "RDNA 3",
       },
     ],
-    // Add more mock data for other categories...
   };
 
   return (
@@ -118,7 +117,6 @@ const BuilderPage = () => {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Component Categories */}
           <div className="lg:col-span-2 space-y-4">
             {categories.map((category) => {
               const selectedComponent = selectedComponents[category.id];
@@ -198,7 +196,6 @@ const BuilderPage = () => {
             })}
           </div>
 
-          {/* Build Summary */}
           <div className="space-y-6">
             <Card className="bg-gray-900 border-gray-800 p-6 sticky top-6">
               <h3 className="text-xl font-semibold mb-4">Build Summary</h3>

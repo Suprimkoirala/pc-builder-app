@@ -34,7 +34,6 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-sm border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -62,7 +61,6 @@ const LandingPage = () => {
         </div>
       </header>
 
-      {/* Hero Section */}
       <section className="min-h-screen flex items-center justify-center px-6 pt-20">
         <div className="max-w-7xl mx-auto text-center space-y-12">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between max-w-4xl mx-auto">
@@ -105,7 +103,6 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Features Section */}
       <section className="py-20 px-6 bg-gray-950">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
@@ -135,7 +132,6 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="py-20 px-6 text-center">
         <div className="max-w-4xl mx-auto space-y-8">
           <h2 className="text-4xl md:text-5xl font-bold">READY TO BUILD?</h2>

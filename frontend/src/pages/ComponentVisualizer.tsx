@@ -32,7 +32,6 @@ const ComponentVisualizerPage = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <header className="bg-black/90 backdrop-blur-sm border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -67,7 +66,6 @@ const ComponentVisualizerPage = () => {
       </header>
 
       <div className="flex h-[calc(100vh-80px)]">
-        {/* 3D Visualization Area */}
         <div className="flex-1 relative">
           <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black">
             <Canvas>
@@ -87,7 +85,6 @@ const ComponentVisualizerPage = () => {
             </Canvas>
           </div>
 
-          {/* 3D Controls */}
           <div className="absolute top-4 right-4 space-y-3">
             <Button
               size="sm"
@@ -109,7 +106,6 @@ const ComponentVisualizerPage = () => {
             </Button>
           </div>
 
-          {/* Visualization Info */}
           <div className="absolute bottom-4 left-4 right-4">
             <Card className="bg-black/80 backdrop-blur-sm border-gray-800 p-4">
               <p className="text-center text-white text-lg">
@@ -120,7 +116,6 @@ const ComponentVisualizerPage = () => {
           </div>
         </div>
 
-        {/* Component Selection Panel */}
         <div className="w-80 bg-gray-950 border-l border-gray-800 p-6 overflow-y-auto">
           <h2 className="text-xl font-semibold mb-6">Component Categories</h2>
 
@@ -150,7 +145,6 @@ const ComponentVisualizerPage = () => {
             })}
           </div>
 
-          {/* Selected Component Details */}
           <div className="mt-8">
             <h3 className="text-lg font-semibold mb-4">Current Selection</h3>
             {selectedComponents[selectedCategory] ? (

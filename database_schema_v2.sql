@@ -332,7 +332,7 @@ CREATE TABLE cases (
     description TEXT,
     
     -- Form Factor Support
-    motherboard_form_factors TEXT[] NOT NULL, -- Array of supported form factors
+    motherboard_form_factors JSON NOT NULL, -- Array of supported form factors
     
     -- Physical Dimensions
     height_mm INTEGER NOT NULL,
@@ -355,8 +355,8 @@ CREATE TABLE cases (
     -- Cooling
     included_fans INTEGER DEFAULT 0,
     max_fans INTEGER DEFAULT 0,
-    fan_sizes INTEGER[], -- Array of supported fan sizes
-    radiator_support TEXT[], -- Array of radiator support info
+    fan_sizes JSON, -- Array of supported fan sizes
+    radiator_support JSON, -- Array of radiator support info
     
     -- Features
     side_panel_type VARCHAR(20) NOT NULL, -- Glass, Steel, Acrylic
@@ -393,7 +393,7 @@ CREATE TABLE cpu_coolers (
     cooler_type VARCHAR(20) NOT NULL, -- Air, Liquid, Hybrid
     
     -- Socket Support
-    socket_support TEXT[] NOT NULL, -- Array of supported sockets
+    socket_support JSON NOT NULL, -- Array of supported sockets
     
     -- Physical Dimensions
     height_mm INTEGER NOT NULL,
@@ -469,7 +469,7 @@ CREATE TABLE compatibility_rules (
     rule_type VARCHAR(50) NOT NULL, -- 'socket_match', 'form_factor', 'power_requirement', etc.
     source_component VARCHAR(20) NOT NULL, -- 'cpu', 'motherboard', etc.
     target_component VARCHAR(20) NOT NULL, -- 'motherboard', 'case', etc.
-    rule_condition JSONB NOT NULL, -- Detailed compatibility logic
+    rule_condition JSON NOT NULL, -- Detailed compatibility logic
     error_message TEXT NOT NULL,
     severity VARCHAR(20) DEFAULT 'error', -- 'error', 'warning', 'info'
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -500,35 +500,101 @@ CREATE INDEX idx_build_parts_part_type ON build_parts(part_type);
 -- TRIGGERS AND FUNCTIONS
 -- ========================================
 
+
+
+
+
+DELIMITER $$
 -- Function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+CREATE TRIGGER update_users_updated_at
+BEFORE UPDATE ON users
+FOR EACH ROW
 BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
+    SET NEW.updated_at = CURRENT_TIMESTAMP;
+END$$
 
 -- Apply updated_at trigger to all tables
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_vendors_updated_at BEFORE UPDATE ON vendors FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_cpus_updated_at BEFORE UPDATE ON cpus FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_motherboards_updated_at BEFORE UPDATE ON motherboards FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_ram_modules_updated_at BEFORE UPDATE ON ram_modules FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_gpus_updated_at BEFORE UPDATE ON gpus FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_storage_devices_updated_at BEFORE UPDATE ON storage_devices FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_power_supplies_updated_at BEFORE UPDATE ON power_supplies FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_cases_updated_at BEFORE UPDATE ON cases FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_cpu_coolers_updated_at BEFORE UPDATE ON cpu_coolers FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_builds_updated_at BEFORE UPDATE ON builds FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_vendors_updated_at
+BEFORE UPDATE ON vendors
+FOR EACH ROW
+BEGIN
+    SET NEW.updated_at = CURRENT_TIMESTAMP;
+END$$
+
+CREATE TRIGGER update_cpus_updated_at
+BEFORE UPDATE ON cpus
+FOR EACH ROW
+BEGIN
+    SET NEW.updated_at = CURRENT_TIMESTAMP;
+END$$
+
+CREATE TRIGGER update_motherboards_updated_at
+BEFORE UPDATE ON motherboards
+FOR EACH ROW
+BEGIN
+    SET NEW.updated_at = CURRENT_TIMESTAMP;
+END$$
+
+CREATE TRIGGER update_ram_modules_updated_at
+BEFORE UPDATE ON ram_modules
+FOR EACH ROW
+BEGIN
+    SET NEW.updated_at = CURRENT_TIMESTAMP;
+END$$
+
+CREATE TRIGGER update_gpus_updated_at
+BEFORE UPDATE ON gpus
+FOR EACH ROW
+BEGIN
+    SET NEW.updated_at = CURRENT_TIMESTAMP;
+END$$
+
+CREATE TRIGGER update_storage_devices_updated_at
+BEFORE UPDATE ON storage_devices
+FOR EACH ROW
+BEGIN
+    SET NEW.updated_at = CURRENT_TIMESTAMP;
+END$$
+
+CREATE TRIGGER update_power_supplies_updated_at
+BEFORE UPDATE ON power_supplies
+FOR EACH ROW
+BEGIN
+    SET NEW.updated_at = CURRENT_TIMESTAMP;
+END$$
+
+CREATE TRIGGER update_cases_updated_at
+BEFORE UPDATE ON cases
+FOR EACH ROW
+BEGIN
+    SET NEW.updated_at = CURRENT_TIMESTAMP;
+END$$
+
+CREATE TRIGGER update_cpu_coolers_updated_at
+BEFORE UPDATE ON cpu_coolers
+FOR EACH ROW
+BEGIN
+    SET NEW.updated_at = CURRENT_TIMESTAMP;
+END$$
+
+CREATE TRIGGER update_builds_updated_at
+BEFORE UPDATE ON builds
+FOR EACH ROW
+BEGIN
+    SET NEW.updated_at = CURRENT_TIMESTAMP;
+END$$
+
+DELIMITER ;
 
 -- Function to calculate build total price
-CREATE OR REPLACE FUNCTION calculate_build_total_price(build_id_param INTEGER)
-RETURNS DECIMAL(12,2) AS $$
-DECLARE
-    total DECIMAL(12,2) := 0;
-    part_price DECIMAL(10,2);
+DELIMITER $$
+
+CREATE FUNCTION calculate_build_total_price(build_id_param INT)
+RETURNS DECIMAL(12,2)
+DETERMINISTIC
 BEGIN
+    DECLARE total DECIMAL(12,2) DEFAULT 0;
+
     SELECT COALESCE(SUM(
         CASE 
             WHEN bp.part_type = 'cpu' THEN c.price * bp.quantity
@@ -552,22 +618,41 @@ BEGIN
     LEFT JOIN cases cs ON bp.part_type = 'case' AND bp.part_id = cs.id
     LEFT JOIN cpu_coolers cc ON bp.part_type = 'cooler' AND bp.part_id = cc.id
     WHERE bp.build_id = build_id_param;
-    
+
     RETURN total;
-END;
-$$ LANGUAGE plpgsql;
+END$$
+
+DELIMITER ;
+
 
 -- Trigger to update build total price when parts change
-CREATE OR REPLACE FUNCTION update_build_total_price()
-RETURNS TRIGGER AS $$
-BEGIN
-    UPDATE builds 
-    SET total_price = calculate_build_total_price(COALESCE(NEW.build_id, OLD.build_id))
-    WHERE id = COALESCE(NEW.build_id, OLD.build_id);
-    RETURN COALESCE(NEW, OLD);
-END;
-$$ LANGUAGE plpgsql;
+DELIMITER $$
 
 CREATE TRIGGER trigger_update_build_total_price
-    AFTER INSERT OR UPDATE OR DELETE ON build_parts
-    FOR EACH ROW EXECUTE FUNCTION update_build_total_price();
+AFTER INSERT ON build_parts
+FOR EACH ROW
+BEGIN
+    UPDATE builds
+    SET total_price = calculate_build_total_price(NEW.build_id)
+    WHERE id = NEW.build_id;
+END$$
+
+CREATE TRIGGER trigger_update_build_total_price_update
+AFTER UPDATE ON build_parts
+FOR EACH ROW
+BEGIN
+    UPDATE builds
+    SET total_price = calculate_build_total_price(NEW.build_id)
+    WHERE id = NEW.build_id;
+END$$
+
+CREATE TRIGGER trigger_update_build_total_price_delete
+AFTER DELETE ON build_parts
+FOR EACH ROW
+BEGIN
+    UPDATE builds
+    SET total_price = calculate_build_total_price(OLD.build_id)
+    WHERE id = OLD.build_id;
+END$$
+
+DELIMITER ;

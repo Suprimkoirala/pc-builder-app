@@ -5,7 +5,7 @@ axios.defaults.headers.common["Content-Type"] = "application/json";
 
 axios.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("access");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -24,24 +24,24 @@ axios.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      localStorage.getItem("refresh_token")
+      localStorage.getItem("refresh")
     ) {
       originalRequest._retry = true;
       try {
-        const refresh = localStorage.getItem("refresh_token");
+        const refresh = localStorage.getItem("refresh");
 
         const res = await axios.post("/api/v1/token/refresh/", {
           refresh,
         });
 
         const newAccessToken = res.data.access;
-        localStorage.setItem("token", newAccessToken);
+        localStorage.setItem("access", newAccessToken);
         axios.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
         originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
         return axios(originalRequest);
       } catch (refreshError) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("refresh_token");
+        localStorage.removeItem("access");
+        localStorage.removeItem("refresh");
         window.location.href = "/login";
         return Promise.reject(refreshError);
       }

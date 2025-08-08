@@ -46,8 +46,7 @@ const LandingPage = () => {
           <div className="flex items-center space-x-4">
             <Link to="/login">
               <Button
-                variant="ghost"
-                className="text-emerald-900  hover:text-black"
+                className="!bg-white hover:!bg-gray-50 !text-black border border-gray-300"
               >
                 Login
               </Button>
@@ -147,8 +146,7 @@ const LandingPage = () => {
             </Link>
             <Link to="/login">
               <Button
-                variant="outline"
-                className="border-gray-700 hover:text-black text-emerald-900 px-8 py-4 text-lg bg-transparent"
+                className="!bg-white hover:!bg-gray-50 !text-black border border-gray-300 px-8 py-4 text-lg"
               >
                 Sign In
               </Button>

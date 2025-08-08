@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect, useContext } from "react";
-import axios from "axios";
+import type { ReactNode } from "react";
+import axios, { AxiosError } from "axios";
 
 interface User {
   id: number;
@@ -22,24 +23,25 @@ export const AuthContext = createContext<AuthContextType | undefined>(
   undefined
 );
 
-export const AuthProvider = ({ children }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("access");
     if (token) {
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       // Get user info
       axios
-        .get("/api/v1/users/me/")
+        .get("/api/v1/me/")
         .then((response) => {
           setCurrentUser(response.data);
           setLoading(false);
         })
         .catch((error) => {
           console.error("Auth error:", error);
-          localStorage.removeItem("token");
+          localStorage.removeItem("access");
+          localStorage.removeItem("refresh");
           delete axios.defaults.headers.common["Authorization"];
           setLoading(false);
         });
@@ -48,64 +50,63 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const login = async (username: string, password: string) => {
+  const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post("/api/v1/token/", {
-        username,
+      const response = await axios.post("/api/v1/login/", {
+        email,
         password,
       });
 
-      const { access, refresh } = response.data;
+      const { access, refresh, user } = response.data;
 
       // store tokens
-      localStorage.setItem("access_token", access);
-      localStorage.setItem("refresh_token", refresh);
+      localStorage.setItem("access", access);
+      localStorage.setItem("refresh", refresh);
       axios.defaults.headers.common["Authorization"] = `Bearer ${access}`;
-
-      // fetch user details
-      const userResponse = await axios.get("/api/v1/me/");
-      const user = userResponse.data;
 
       setCurrentUser(user);
 
       return { success: true, user };
     } catch (error) {
-      console.error("Login error:", error.response?.data);
-      return { success: false, error: error.response?.data || "Login failed" };
+      const axiosError = error as AxiosError;
+      console.error("Login error:", axiosError.response?.data);
+      return { success: false, error: axiosError.response?.data || "Login failed" };
     }
   };
 
-  const register = async (username, email, password) => {
+  const register = async (username: string, email: string, password: string) => {
     try {
       const response = await axios.post("/api/v1/register/", {
         username,
         email,
         password,
       });
-      const { access, user } = response.data;
+      const { access, refresh, user } = response.data;
 
-      localStorage.setItem("token", access);
+      localStorage.setItem("access", access);
+      localStorage.setItem("refresh", refresh);
       axios.defaults.headers.common["Authorization"] = `Bearer ${access}`;
       setCurrentUser(user);
 
       return { success: true, user };
     } catch (error) {
+      const axiosError = error as AxiosError;
       return {
         success: false,
-        error: error.response?.data || "Registration failed",
+        error: axiosError.response?.data || "Registration failed",
       };
     }
   };
 
   const logout = async () => {
     try {
-      const refresh = localStorage.getItem("refresh_token");
+      const refresh = localStorage.getItem("refresh");
 
       await axios.post("/api/v1/logout/", { refresh });
 
       // Clear local storage and headers
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("access");
+      localStorage.removeItem("refresh");
       delete axios.defaults.headers.common["Authorization"];
       setCurrentUser(null);
     } catch (error) {

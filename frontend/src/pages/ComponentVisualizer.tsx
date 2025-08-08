@@ -37,10 +37,9 @@ const ComponentVisualizerPage = () => {
           <div className="flex items-center space-x-4">
             <Link to="/builder">
               <Button
-                variant="ghost"
-                className="text-gray-900 hover:text-black"
+                className="!bg-white hover:!bg-gray-50 !text-black border border-gray-300"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
+                <ArrowLeft className="w-4 h-4 mr-2 " />
                 Back to Builder
               </Button>
             </Link>
@@ -88,19 +87,19 @@ const ComponentVisualizerPage = () => {
           <div className="absolute top-4 right-4 space-y-3">
             <Button
               size="sm"
-              className="bg-gray-800 hover:bg-gray-700 text-black"
+              className="bg-white hover:bg-gray-100 text-gray-900"
             >
               <RotateCcw className="w-4 h-4" />
             </Button>
             <Button
               size="sm"
-              className="bg-gray-800 hover:bg-gray-700 text-black"
+              className="bg-white hover:bg-gray-100 text-gray-900"
             >
               <ZoomIn className="w-4 h-4" />
             </Button>
             <Button
               size="sm"
-              className="bg-gray-800 hover:bg-gray-700 text-black"
+              className="bg-white hover:bg-gray-100 text-gray-900"
             >
               <ZoomOut className="w-4 h-4" />
             </Button>

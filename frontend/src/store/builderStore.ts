@@ -1,7 +1,7 @@
 import { create } from "zustand"
 
 interface Component {
-  id: string
+  id: number
   name: string
   category: string
   price: number

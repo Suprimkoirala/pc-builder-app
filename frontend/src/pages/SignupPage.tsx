@@ -74,7 +74,7 @@ const SignupPage = () => {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-900 mb-2"
+                className="block text-sm font-medium text-gray-300 mb-2"
               >
                 Email
               </label>

@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect, useContext } from "react";
-import axios from "axios";
+import type { ReactNode } from "react";
+import axios, { AxiosError } from "axios";
 
 interface User {
   id: number;
@@ -22,7 +23,7 @@ export const AuthContext = createContext<AuthContextType | undefined>(
   undefined
 );
 
-export const AuthProvider = ({ children }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -70,12 +71,13 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, user };
     } catch (error) {
-      console.error("Login error:", error.response?.data);
-      return { success: false, error: error.response?.data || "Login failed" };
+      const axiosError = error as AxiosError;
+      console.error("Login error:", axiosError.response?.data);
+      return { success: false, error: axiosError.response?.data || "Login failed" };
     }
   };
 
-  const register = async (username, email, password) => {
+  const register = async (username: string, email: string, password: string) => {
     try {
       const response = await axios.post("/api/v1/register/", {
         username,
@@ -90,9 +92,10 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, user };
     } catch (error) {
+      const axiosError = error as AxiosError;
       return {
         success: false,
-        error: error.response?.data || "Registration failed",
+        error: axiosError.response?.data || "Registration failed",
       };
     }
   };

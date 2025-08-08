@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   LogOut,
@@ -20,10 +20,16 @@ import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 
 const BuilderPage = () => {
-  const { user, logout } = useAuthStore();
+  const { user, logout, fetchUser } = useAuthStore();
   const { selectedComponents, selectComponent, getTotalPrice } =
     useBuilderStore();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      fetchUser();
+    }
+  }, [user, fetchUser]);
 
   const categories = [
     { id: "cpu", name: "Processor", icon: <Cpu className="w-6 h-6" /> },
@@ -89,17 +95,16 @@ const BuilderPage = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <span className="text-gray-300">Welcome, {user?.username}</span>
+            <span className="text-gray-300 ">Welcome, {user?.username || 'User'}</span>
             <Link to="/visualizer">
-              <Button className="bg-blue-500 hover:bg-blue-600 text-gray-900">
+              <Button className="!bg-white hover:!bg-gray-50 !text-black border border-gray-300">
                 <Eye className="w-4 h-4 mr-2" />
                 3D Visualizer
               </Button>
             </Link>
             <Button
-              variant="ghost"
               onClick={logout}
-              className="text-gray-900 hover:text-black"
+              className="!bg-white hover:!bg-gray-50 !text-black border border-gray-300"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Logout
@@ -227,7 +232,7 @@ const BuilderPage = () => {
                 </div>
                 <div className="space-y-3">
                   <Link to="/visualizer">
-                    <Button className="w-full bg-blue-500 hover:bg-blue-600 text-emerald-900">
+                    <Button className="w-full !bg-white hover:!bg-gray-50 !text-black border border-gray-300">
                       <Eye className="w-4 h-4 mr-2" />
                       View in 3D
                     </Button>

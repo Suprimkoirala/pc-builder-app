@@ -35,6 +35,18 @@ const CATEGORY_CONFIG: Record<string, { endpoint: string; icon: React.ReactNode;
   storage: { endpoint: "/api/v1/storage/", icon: <HardDrive className="w-6 h-6" />, label: "Storage" },
 };
 
+// Map UI categories to backend compatibility types
+const COMPAT_TYPE_MAP: Record<string, string> = {
+  memory: "ram",
+  cooling: "cooler",
+  cpu: "cpu",
+  motherboard: "motherboard",
+  gpu: "gpu",
+  storage: "storage",
+  psu: "psu",
+  case: "case",
+};
+
 // The new desired order
 const CATEGORY_ORDER = [
   "case",
@@ -74,7 +86,7 @@ const BuilderPage = () => {
     const sc = selectedComponents as Record<string, { id?: number } | null>;
     if (sc.cpu?.id) q.selected_cpu_id = sc.cpu.id;
     if (sc.motherboard?.id) q.selected_motherboard_id = sc.motherboard.id;
-    if (sc.ram?.id) q.selected_ram_id = sc.ram.id;
+    if (sc.memory?.id) q.selected_ram_id = sc.memory.id;
     if (sc.gpu?.id) q.selected_gpu_id = sc.gpu.id;
     if (sc.storage?.id) q.selected_storage_id = sc.storage.id;
     if (sc.psu?.id) q.selected_psu_id = sc.psu.id;
@@ -85,7 +97,8 @@ const BuilderPage = () => {
 
   // Fetch items with compatibility for a given category
   const fetchWithCompatibility = async (categoryId: string) => {
-    const params = new URLSearchParams({ type: categoryId } as any);
+    const compatType = COMPAT_TYPE_MAP[categoryId] || categoryId;
+    const params = new URLSearchParams({ type: compatType } as any);
     const sel = getSelectionQuery();
     Object.entries(sel).forEach(([k, v]) => params.append(k, String(v)));
     const res = await axios.get(`/api/v1/options-with-compatibility/?${params.toString()}`);

@@ -148,6 +148,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # At the bottom of the file, under INSTALLED_APPS etc.
 AUTH_USER_MODEL = 'pcbuilder.User'
 
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    'pcbuilder.backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 LOGIN_REDIRECT_URL = '/api/v1/'
 
 # Add CORS settings

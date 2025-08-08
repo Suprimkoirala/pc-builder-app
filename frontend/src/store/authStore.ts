@@ -4,7 +4,7 @@ import axios from "axios"
 const API_BASE = "http://localhost:8000/api/v1"
 
 interface User {
-  id: string
+  id: number
   username: string
   email: string
 }
@@ -29,12 +29,12 @@ export const useAuthStore = create<AuthState>((set) => ({
         email,
         password,
       })
-      const { access, refresh } = res.data
+      const { access, refresh, user } = res.data
       
       localStorage.setItem("access", access)
       localStorage.setItem("refresh", refresh)
 
-      await useAuthStore.getState().fetchUser()
+      set({ user, isAuthenticated: true })
       return true
     } catch (err) {
       console.error("Login error:", err)
@@ -49,14 +49,12 @@ export const useAuthStore = create<AuthState>((set) => ({
         email,
         password,
       })
-      const { access, refresh } = res.data.tokens
-      const { id, username: uname, email: userEmail } = res.data.user
+      const { access, refresh, user } = res.data
 
       localStorage.setItem("access", access)
       localStorage.setItem("refresh", refresh)
 
-      set({ user: { id, username: uname, email: userEmail }, isAuthenticated: true })
-
+      set({ user, isAuthenticated: true })
       return true
     } catch (err) {
       console.error("Signup error:", err)
@@ -91,20 +89,13 @@ export const useAuthStore = create<AuthState>((set) => ({
         },
       })
       
-      useAuthStore.setState({
-        user: res.data,
-        isAuthenticated: true,
-      })
-      
-      const { id, username, email } = res.data
-      set({ user: { id, username, email }, isAuthenticated: true })
+      set({ user: res.data, isAuthenticated: true })
       
   } catch (err) {
     console.error("Failed to fetch user:", err)
-    useAuthStore.setState({ user: null, isAuthenticated: false })
+    set({ user: null, isAuthenticated: false })
     }
   },
-
 
   tryAutoLogin: async () => {
     const access = localStorage.getItem("access")

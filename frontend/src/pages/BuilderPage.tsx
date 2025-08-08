@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   LogOut,
@@ -13,17 +13,51 @@ import {
   MemoryStick,
   CircuitBoardIcon as Motherboard,
   Fan,
+  Server,
 } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import { useBuilderStore } from "../store/builderStore";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
+import axios from "axios";
+
+// Map category to API endpoint and icon
+const CATEGORY_CONFIG: Record<string, { endpoint: string; icon: React.ReactNode; label: string }> = {
+  case: { endpoint: "/api/v1/cases/", icon: <Settings className="w-6 h-6" />, label: "Case" },
+  motherboard: { endpoint: "/api/v1/motherboards/", icon: <Motherboard className="w-6 h-6" />, label: "Motherboard" },
+  cpu: { endpoint: "/api/v1/cpus/", icon: <Cpu className="w-6 h-6" />, label: "Processor" },
+  gpu: { endpoint: "/api/v1/gpus/", icon: <Monitor className="w-6 h-6" />, label: "Graphics Card" },
+  psu: { endpoint: "/api/v1/power-supplies/", icon: <Zap className="w-6 h-6" />, label: "Power Supply" },
+  cooling: { endpoint: "/api/v1/cpu-coolers/", icon: <Fan className="w-6 h-6" />, label: "Cooling" },
+  memory: { endpoint: "/api/v1/ram/", icon: <MemoryStick className="w-6 h-6" />, label: "Memory" },
+  storage: { endpoint: "/api/v1/storage/", icon: <HardDrive className="w-6 h-6" />, label: "Storage" },
+};
+
+// The new desired order
+const CATEGORY_ORDER = [
+  "case",
+  "motherboard",
+  "cpu",
+  "gpu",
+  "psu",
+  "cooling",
+  "memory",
+  "storage",
+];
+
+type Item = {
+  id: number;
+  name: string;
+  model?: string;
+  price: number;
+};
 
 const BuilderPage = () => {
   const { user, logout, fetchUser } = useAuthStore();
-  const { selectedComponents, selectComponent, getTotalPrice } =
-    useBuilderStore();
+  const { selectedComponents, selectComponent, getTotalPrice, removeComponent } = useBuilderStore();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [itemsByCategory, setItemsByCategory] = useState<Record<string, Item[]>>({});
+  const [loadingByCategory, setLoadingByCategory] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!user) {
@@ -31,55 +65,27 @@ const BuilderPage = () => {
     }
   }, [user, fetchUser]);
 
-  const categories = [
-    { id: "cpu", name: "Processor", icon: <Cpu className="w-6 h-6" /> },
-    { id: "gpu", name: "Graphics Card", icon: <Monitor className="w-6 h-6" /> },
-    {
-      id: "motherboard",
-      name: "Motherboard",
-      icon: <Motherboard className="w-6 h-6" />,
-    },
-    { id: "memory", name: "Memory", icon: <MemoryStick className="w-6 h-6" /> },
-    { id: "storage", name: "Storage", icon: <HardDrive className="w-6 h-6" /> },
-    { id: "psu", name: "Power Supply", icon: <Zap className="w-6 h-6" /> },
-    { id: "case", name: "Case", icon: <Settings className="w-6 h-6" /> },
-    { id: "cooling", name: "Cooling", icon: <Fan className="w-6 h-6" /> },
-  ];
-
-  // Mock component data
-  const mockComponents = {
-    cpu: [
-      {
-        id: "cpu1",
-        name: "Intel Core i9-13900K",
-        category: "cpu",
-        price: 589,
-        model: "13th Gen",
-      },
-      {
-        id: "cpu2",
-        name: "AMD Ryzen 9 7950X",
-        category: "cpu",
-        price: 699,
-        model: "Zen 4",
-      },
-    ],
-    gpu: [
-      {
-        id: "gpu1",
-        name: "NVIDIA RTX 4090",
-        category: "gpu",
-        price: 1599,
-        model: "Ada Lovelace",
-      },
-      {
-        id: "gpu2",
-        name: "AMD RX 7900 XTX",
-        category: "gpu",
-        price: 999,
-        model: "RDNA 3",
-      },
-    ],
+  // Fetch items lazily when a category is expanded
+  const ensureCategoryLoaded = async (categoryId: string) => {
+    if (itemsByCategory[categoryId] || loadingByCategory[categoryId]) return;
+    setLoadingByCategory((s) => ({ ...s, [categoryId]: true }));
+    try {
+      const cfg = CATEGORY_CONFIG[categoryId];
+      const res = await axios.get(cfg.endpoint);
+      // Normalize minimal fields to match UI expectations
+      const items: Item[] = (res.data || []).map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        model: row.model || row.chipset || row.socket_type || row.form_factor || undefined,
+        price: Number(row.price ?? 0),
+      }));
+      setItemsByCategory((s) => ({ ...s, [categoryId]: items }));
+    } catch (e) {
+      console.error(`Failed to fetch ${categoryId}`, e);
+      setItemsByCategory((s) => ({ ...s, [categoryId]: [] }));
+    } finally {
+      setLoadingByCategory((s) => ({ ...s, [categoryId]: false }));
+    }
   };
 
   return (
@@ -116,39 +122,36 @@ const BuilderPage = () => {
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-4">PC Builder</h1>
-          <p className="text-gray-400">
-            Select components to build your perfect PC
-          </p>
+          <p className="text-gray-400">Select components to build your perfect PC</p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
-            {categories.map((category) => {
-              const selectedComponent = selectedComponents[category.id];
+            {CATEGORY_ORDER.map((categoryId) => {
+              const cfg = CATEGORY_CONFIG[categoryId];
+              const selectedComponent = selectedComponents[categoryId];
+              const items = itemsByCategory[categoryId] || [];
+              const loading = !!loadingByCategory[categoryId];
               return (
                 <Card
-                  key={category.id}
+                  key={categoryId}
                   className={`bg-gray-900 border-gray-800 hover:border-gray-700 transition-all cursor-pointer ${
-                    selectedCategory === category.id ? "border-blue-500" : ""
+                    selectedCategory === categoryId ? "border-blue-500" : ""
                   }`}
-                  onClick={() =>
-                    setSelectedCategory(
-                      selectedCategory === category.id ? null : category.id
-                    )
-                  }
+                  onClick={async () => {
+                    const next = selectedCategory === categoryId ? null : categoryId;
+                    setSelectedCategory(next);
+                    if (next) await ensureCategoryLoaded(categoryId);
+                  }}
                 >
                   <div className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <div className="text-blue-400">{category.icon}</div>
+                        <div className="text-blue-400">{cfg.icon}</div>
                         <div>
-                          <h3 className="text-lg font-semibold">
-                            {category.name}
-                          </h3>
+                          <h3 className="text-lg font-semibold">{cfg.label}</h3>
                           <p className="text-gray-400 text-sm">
-                            {selectedComponent
-                              ? selectedComponent.name
-                              : `Select ${category.name.toLowerCase()}`}
+                            {selectedComponent ? selectedComponent.name : `Select ${cfg.label.toLowerCase()}`}
                           </p>
                         </div>
                       </div>
@@ -164,35 +167,62 @@ const BuilderPage = () => {
                       </div>
                     </div>
 
-                    {selectedCategory === category.id && (
+                    {selectedCategory === categoryId && (
                       <div className="mt-6 pt-6 border-t border-gray-800">
-                        <div className="space-y-3">
-                          {(
-                            mockComponents[
-                              category.id as keyof typeof mockComponents
-                            ] || []
-                          ).map((component) => (
-                            <div
-                              key={component.id}
-                              className="flex items-center justify-between p-3 bg-gray-800 rounded-lg hover:bg-gray-700 cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                selectComponent(category.id, component);
-                                setSelectedCategory(null);
-                              }}
-                            >
-                              <div>
-                                <p className="font-medium">{component.name}</p>
-                                <p className="text-sm text-gray-400">
-                                  {component.model}
+                        {loading ? (
+                          <div className="flex items-center text-gray-400">
+                            <Server className="w-4 h-4 mr-2 animate-pulse" /> Loading...
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {items.map((component) => (
+                              <div
+                                key={`${categoryId}-${component.id}`}
+                                className="flex items-center justify-between p-3 bg-gray-800 rounded-lg hover:bg-gray-700 cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  selectComponent(categoryId, {
+                                    id: component.id,
+                                    name: component.name,
+                                    category: categoryId,
+                                    price: component.price,
+                                    model: component.model,
+                                  });
+                                  setSelectedCategory(null);
+                                }}
+                              >
+                                <div>
+                                  <p className="font-medium">{component.name}</p>
+                                  {component.model && (
+                                    <p className="text-sm text-gray-400">{component.model}</p>
+                                  )}
+                                </div>
+                                <p className="font-semibold">
+                                  ${component.price.toLocaleString()}
                                 </p>
                               </div>
-                              <p className="font-semibold">
-                                ${component.price.toLocaleString()}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
+                            ))}
+                            {items.length === 0 && (
+                              <div className="text-gray-400 text-sm">No options found.</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {selectedComponent && (
+                      <div className="mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-gray-700 text-emerald-900 hover:bg-gray-800 hover:text-black bg-transparent"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeComponent(categoryId);
+                          }}
+                        >
+                          Remove {cfg.label}
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -206,23 +236,12 @@ const BuilderPage = () => {
               <h3 className="text-xl font-semibold mb-4">Build Summary</h3>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  {Object.entries(selectedComponents).map(
-                    ([category, component]) => (
-                      <div
-                        key={category}
-                        className="flex justify-between text-sm"
-                      >
-                        <span className="text-gray-300 capitalize">
-                          {category}
-                        </span>
-                        <span>
-                          {component
-                            ? `$${component.price.toLocaleString()}`
-                            : "-"}
-                        </span>
-                      </div>
-                    )
-                  )}
+                  {Object.entries(selectedComponents).map(([category, component]) => (
+                    <div key={category} className="flex justify-between text-sm">
+                      <span className="text-gray-300 capitalize">{category}</span>
+                      <span>{component ? `$${component.price.toLocaleString()}` : "-"}</span>
+                    </div>
+                  ))}
                 </div>
                 <div className="border-t border-gray-800 pt-4">
                   <div className="flex justify-between text-lg font-semibold">

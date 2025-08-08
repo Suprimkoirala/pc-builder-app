@@ -14,6 +14,8 @@ import {
   CircuitBoardIcon as Motherboard,
   Fan,
   Server,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import { useBuilderStore } from "../store/builderStore";
@@ -50,6 +52,7 @@ type Item = {
   name: string;
   model?: string;
   price: number;
+  compatible?: boolean;
 };
 
 const BuilderPage = () => {
@@ -65,20 +68,43 @@ const BuilderPage = () => {
     }
   }, [user, fetchUser]);
 
+  // Build query params for compatibility endpoint based on current selection
+  const getSelectionQuery = () => {
+    const q: Record<string, string | number> = {};
+    const sc = selectedComponents as Record<string, { id?: number } | null>;
+    if (sc.cpu?.id) q.selected_cpu_id = sc.cpu.id;
+    if (sc.motherboard?.id) q.selected_motherboard_id = sc.motherboard.id;
+    if (sc.ram?.id) q.selected_ram_id = sc.ram.id;
+    if (sc.gpu?.id) q.selected_gpu_id = sc.gpu.id;
+    if (sc.storage?.id) q.selected_storage_id = sc.storage.id;
+    if (sc.psu?.id) q.selected_psu_id = sc.psu.id;
+    if (sc.case?.id) q.selected_case_id = sc.case.id;
+    if (sc.cooling?.id) q.selected_cooler_id = sc.cooling.id;
+    return q;
+  };
+
+  // Fetch items with compatibility for a given category
+  const fetchWithCompatibility = async (categoryId: string) => {
+    const params = new URLSearchParams({ type: categoryId } as any);
+    const sel = getSelectionQuery();
+    Object.entries(sel).forEach(([k, v]) => params.append(k, String(v)));
+    const res = await axios.get(`/api/v1/options-with-compatibility/?${params.toString()}`);
+    const items: Item[] = (res.data || []).map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      model: row.model,
+      price: Number(row.price ?? 0),
+      compatible: Boolean(row.compatible),
+    }));
+    return items;
+  };
+
   // Fetch items lazily when a category is expanded
-  const ensureCategoryLoaded = async (categoryId: string) => {
-    if (itemsByCategory[categoryId] || loadingByCategory[categoryId]) return;
+  const ensureCategoryLoaded = async (categoryId: string, force = false) => {
+    if ((itemsByCategory[categoryId] && !force) || loadingByCategory[categoryId]) return;
     setLoadingByCategory((s) => ({ ...s, [categoryId]: true }));
     try {
-      const cfg = CATEGORY_CONFIG[categoryId];
-      const res = await axios.get(cfg.endpoint);
-      // Normalize minimal fields to match UI expectations
-      const items: Item[] = (res.data || []).map((row: any) => ({
-        id: row.id,
-        name: row.name,
-        model: row.model || row.chipset || row.socket_type || row.form_factor || undefined,
-        price: Number(row.price ?? 0),
-      }));
+      const items = await fetchWithCompatibility(categoryId);
       setItemsByCategory((s) => ({ ...s, [categoryId]: items }));
     } catch (e) {
       console.error(`Failed to fetch ${categoryId}`, e);
@@ -87,6 +113,14 @@ const BuilderPage = () => {
       setLoadingByCategory((s) => ({ ...s, [categoryId]: false }));
     }
   };
+
+  // When selection changes and a category panel is open, refresh its compatibility
+  useEffect(() => {
+    if (selectedCategory) {
+      ensureCategoryLoaded(selectedCategory, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(selectedComponents), selectedCategory]);
 
   return (
     <div className="min-h-screen">
@@ -141,7 +175,7 @@ const BuilderPage = () => {
                   onClick={async () => {
                     const next = selectedCategory === categoryId ? null : categoryId;
                     setSelectedCategory(next);
-                    if (next) await ensureCategoryLoaded(categoryId);
+                    if (next) await ensureCategoryLoaded(categoryId, true);
                   }}
                 >
                   <div className="p-6">
@@ -175,33 +209,47 @@ const BuilderPage = () => {
                           </div>
                         ) : (
                           <div className="space-y-3">
-                            {items.map((component) => (
-                              <div
-                                key={`${categoryId}-${component.id}`}
-                                className="flex items-center justify-between p-3 bg-gray-800 rounded-lg hover:bg-gray-700 cursor-pointer"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  selectComponent(categoryId, {
-                                    id: component.id,
-                                    name: component.name,
-                                    category: categoryId,
-                                    price: component.price,
-                                    model: component.model,
-                                  });
-                                  setSelectedCategory(null);
-                                }}
-                              >
-                                <div>
-                                  <p className="font-medium">{component.name}</p>
-                                  {component.model && (
-                                    <p className="text-sm text-gray-400">{component.model}</p>
-                                  )}
+                            {items.map((component) => {
+                              const isCompatible = component.compatible !== false;
+                              return (
+                                <div
+                                  key={`${categoryId}-${component.id}`}
+                                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                                    isCompatible ? "bg-gray-800 hover:bg-gray-700" : "bg-gray-800/70 hover:bg-gray-700/70"
+                                  }`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    selectComponent(categoryId, {
+                                      id: component.id,
+                                      name: component.name,
+                                      category: categoryId,
+                                      price: component.price,
+                                      model: component.model,
+                                    });
+                                    setSelectedCategory(null);
+                                  }}
+                                >
+                                  <div>
+                                    <p className="font-medium">{component.name}</p>
+                                    {component.model && (
+                                      <p className="text-sm text-gray-400">{component.model}</p>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center space-x-3">
+                                    {isCompatible ? (
+                                      <span className="flex items-center text-green-400 text-sm">
+                                        <CheckCircle className="w-4 h-4 mr-1" /> Compatible
+                                      </span>
+                                    ) : (
+                                      <span className="flex items-center text-red-400 text-sm">
+                                        <XCircle className="w-4 h-4 mr-1" /> Incompatible
+                                      </span>
+                                    )}
+                                    <p className="font-semibold">${component.price.toLocaleString()}</p>
+                                  </div>
                                 </div>
-                                <p className="font-semibold">
-                                  ${component.price.toLocaleString()}
-                                </p>
-                              </div>
-                            ))}
+                              );
+                            })}
                             {items.length === 0 && (
                               <div className="text-gray-400 text-sm">No options found.</div>
                             )}

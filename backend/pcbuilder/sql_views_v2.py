@@ -39,6 +39,184 @@ def get_vendors(request):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # ========================================
+# OPTIONS WITH COMPATIBILITY
+# ========================================
+
+@api_view(['GET'])
+def get_options_with_compatibility(request):
+    """Return options for a target type annotated with compatibility against selected parts.
+    Query params:
+      - type: one of cpu, motherboard, ram, gpu, storage, psu, case, cooler
+      - selected_*_id: ids of currently selected parts (e.g., selected_cpu_id=1)
+    """
+    try:
+        target_type = request.GET.get('type')
+        if target_type not in ['cpu', 'motherboard', 'ram', 'gpu', 'storage', 'psu', 'case', 'cooler']:
+            return Response({'error': 'Invalid or missing type'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Read selected ids
+        sel = {
+            'cpu': request.GET.get('selected_cpu_id'),
+            'motherboard': request.GET.get('selected_motherboard_id'),
+            'ram': request.GET.get('selected_ram_id'),
+            'gpu': request.GET.get('selected_gpu_id'),
+            'storage': request.GET.get('selected_storage_id'),
+            'psu': request.GET.get('selected_psu_id'),
+            'case': request.GET.get('selected_case_id'),
+            'cooler': request.GET.get('selected_cooler_id'),
+        }
+        # Cast to ints or None
+        for k, v in list(sel.items()):
+            sel[k] = int(v) if v and v.isdigit() else None
+
+        # Fetch selected part specs
+        selected_specs = {}
+        with connection.cursor() as cursor:
+            if sel['cpu']:
+                cursor.execute("SELECT id, socket_type, tdp FROM cpus WHERE id=%s", [sel['cpu']])
+                row = cursor.fetchone()
+                if row:
+                    selected_specs['cpu'] = {'id': row[0], 'socket_type': row[1], 'tdp': row[2]}
+            if sel['motherboard']:
+                cursor.execute("SELECT id, socket_type, form_factor, ram_type, ram_slots, max_ram_speed, sata_ports, m2_slots, m2_pcie_slots FROM motherboards WHERE id=%s", [sel['motherboard']])
+                row = cursor.fetchone()
+                if row:
+                    selected_specs['motherboard'] = {
+                        'id': row[0], 'socket_type': row[1], 'form_factor': row[2], 'ram_type': row[3],
+                        'ram_slots': row[4], 'max_ram_speed': row[5], 'sata_ports': row[6],
+                        'm2_slots': row[7], 'm2_pcie_slots': row[8]
+                    }
+            if sel['ram']:
+                cursor.execute("SELECT id, ram_type, speed, modules_in_kit FROM ram_modules WHERE id=%s", [sel['ram']])
+                row = cursor.fetchone()
+                if row:
+                    selected_specs['ram'] = {'id': row[0], 'ram_type': row[1], 'speed': row[2], 'modules_in_kit': row[3]}
+            if sel['gpu']:
+                cursor.execute("SELECT id, length_mm, tdp, recommended_psu_watts FROM gpus WHERE id=%s", [sel['gpu']])
+                row = cursor.fetchone()
+                if row:
+                    selected_specs['gpu'] = {'id': row[0], 'length_mm': row[1], 'tdp': row[2], 'recommended_psu_watts': row[3]}
+            if sel['storage']:
+                cursor.execute("SELECT id, interface, form_factor FROM storage_devices WHERE id=%s", [sel['storage']])
+                row = cursor.fetchone()
+                if row:
+                    selected_specs['storage'] = {'id': row[0], 'interface': row[1], 'form_factor': row[2]}
+            if sel['psu']:
+                cursor.execute("SELECT id, wattage FROM power_supplies WHERE id=%s", [sel['psu']])
+                row = cursor.fetchone()
+                if row:
+                    selected_specs['psu'] = {'id': row[0], 'wattage': row[1]}
+            if sel['case']:
+                cursor.execute("SELECT id, max_gpu_length_mm, max_cooler_height_mm, motherboard_form_factors FROM cases WHERE id=%s", [sel['case']])
+                row = cursor.fetchone()
+                if row:
+                    selected_specs['case'] = {'id': row[0], 'max_gpu_length_mm': row[1], 'max_cooler_height_mm': row[2], 'motherboard_form_factors': row[3]}
+            if sel['cooler']:
+                cursor.execute("SELECT id, height_mm, socket_support FROM cpu_coolers WHERE id=%s", [sel['cooler']])
+                row = cursor.fetchone()
+                if row:
+                    selected_specs['cooler'] = {'id': row[0], 'height_mm': row[1], 'socket_support': row[2]}
+
+            # Fetch all candidates for target_type
+            table = {
+                'cpu': 'cpus', 'motherboard': 'motherboards', 'ram': 'ram_modules', 'gpu': 'gpus',
+                'storage': 'storage_devices', 'psu': 'power_supplies', 'case': 'cases', 'cooler': 'cpu_coolers'
+            }[target_type]
+
+            cursor.execute(f"SELECT * FROM {table} WHERE is_active = TRUE")
+            columns = [col[0] for col in cursor.description]
+            candidates = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        # Compute compatibility per target type
+        def compat_true():
+            return True
+
+        annotated = []
+        for item in candidates:
+            compatible = True
+            # cpu needs to match selected motherboard socket if present
+            if target_type == 'cpu' and selected_specs.get('motherboard'):
+                compatible = (item.get('socket_type') == selected_specs['motherboard']['socket_type'])
+            # motherboard must satisfy selected cpu socket, case form_factor, ram type/slots/speed
+            elif target_type == 'motherboard':
+                if selected_specs.get('cpu'):
+                    compatible = compatible and (item.get('socket_type') == selected_specs['cpu']['socket_type'])
+                if compatible and selected_specs.get('case'):
+                    forms = selected_specs['case']['motherboard_form_factors'] or []
+                    compatible = compatible and (item.get('form_factor') in forms)
+                if compatible and selected_specs.get('ram'):
+                    compatible = compatible and (item.get('ram_type') == selected_specs['ram']['ram_type'])
+                    if compatible and item.get('ram_slots') is not None and selected_specs['ram'].get('modules_in_kit') is not None:
+                        compatible = compatible and (selected_specs['ram']['modules_in_kit'] <= item['ram_slots'])
+                    if compatible and item.get('max_ram_speed') is not None and selected_specs['ram'].get('speed') is not None:
+                        compatible = compatible and (selected_specs['ram']['speed'] <= item['max_ram_speed'])
+            # ram must match selected motherboard
+            elif target_type == 'ram' and selected_specs.get('motherboard'):
+                m = selected_specs['motherboard']
+                compatible = (item.get('ram_type') == m['ram_type'])
+                if compatible and m.get('ram_slots') is not None and item.get('modules_in_kit') is not None:
+                    compatible = compatible and (item['modules_in_kit'] <= m['ram_slots'])
+                if compatible and m.get('max_ram_speed') is not None and item.get('speed') is not None:
+                    compatible = compatible and (item['speed'] <= m['max_ram_speed'])
+            # gpu vs case (length) and psu (wattage) with optional cpu tdp
+            elif target_type == 'gpu':
+                if selected_specs.get('case'):
+                    compatible = compatible and (item.get('length_mm') is None or item['length_mm'] <= selected_specs['case']['max_gpu_length_mm'])
+                if compatible and selected_specs.get('psu'):
+                    cpu_tdp = selected_specs.get('cpu', {}).get('tdp', 0) or 0
+                    gpu_tdp = item.get('tdp') or 0
+                    required = max((cpu_tdp + gpu_tdp + 100), item.get('recommended_psu_watts') or 0)
+                    compatible = compatible and (selected_specs['psu']['wattage'] >= required)
+            # storage vs motherboard interface/slots
+            elif target_type == 'storage' and selected_specs.get('motherboard'):
+                m = selected_specs['motherboard']
+                iface = item.get('interface')
+                form = item.get('form_factor')
+                if iface == 'SATA':
+                    compatible = (m.get('sata_ports', 0) > 0)
+                elif iface == 'PCIe' and form == 'M.2':
+                    compatible = (m.get('m2_pcie_slots', 0) > 0) or (m.get('m2_slots', 0) > 0)
+                else:
+                    compatible = True
+            # psu vs cpu/gpu required wattage
+            elif target_type == 'psu' and (selected_specs.get('cpu') or selected_specs.get('gpu')):
+                cpu_tdp = selected_specs.get('cpu', {}).get('tdp', 0) or 0
+                gpu_tdp = selected_specs.get('gpu', {}).get('tdp', 0) or 0
+                gpu_rec = selected_specs.get('gpu', {}).get('recommended_psu_watts', 0) or 0
+                required = max((cpu_tdp + gpu_tdp + 100), gpu_rec)
+                compatible = (item.get('wattage', 0) >= required)
+            # case vs motherboard form factor, gpu length, cooler height
+            elif target_type == 'case':
+                if selected_specs.get('motherboard'):
+                    forms = item.get('motherboard_form_factors') or []
+                    compatible = compatible and (selected_specs['motherboard']['form_factor'] in forms)
+                if compatible and selected_specs.get('gpu') and item.get('max_gpu_length_mm'):
+                    compatible = compatible and (selected_specs['gpu']['length_mm'] <= item['max_gpu_length_mm'])
+                if compatible and selected_specs.get('cooler') and item.get('max_cooler_height_mm'):
+                    compatible = compatible and (selected_specs['cooler']['height_mm'] <= item['max_cooler_height_mm'])
+            # cooler vs case height and cpu socket
+            elif target_type == 'cooler':
+                if selected_specs.get('case') and item.get('height_mm') and selected_specs['case'].get('max_cooler_height_mm'):
+                    compatible = compatible and (item['height_mm'] <= selected_specs['case']['max_cooler_height_mm'])
+                if compatible and selected_specs.get('cpu'):
+                    sockets = item.get('socket_support') or []
+                    compatible = compatible and (selected_specs['cpu']['socket_type'] in sockets)
+            # default: if no related selection, keep as compatible
+
+            item_out = {
+                'id': item.get('id'),
+                'name': item.get('name'),
+                'model': item.get('model'),
+                'price': float(item.get('price') or 0),
+                'compatible': bool(compatible),
+            }
+            annotated.append(item_out)
+
+        return Response(annotated)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# ========================================
 # CPU ENDPOINTS
 # ========================================
 

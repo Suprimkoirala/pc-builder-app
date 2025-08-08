@@ -14,15 +14,19 @@ import { useBuilderStore } from "../store/builderStore";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import ComponentModel from "../components/3d/ComponentModel";
+import R3FErrorBoundary from "../components/3d/R3FErrorBoundary";
+import { FallbackModel } from "../components/3d/fallback";
 
 const ComponentVisualizerPage = () => {
-  const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const { selectedComponents } = useBuilderStore();
   const [selectedCategory, setSelectedCategory] = useState<string>("cpu");
 
+  const displayName = user?.username;
+
   const categories = [
-    { id: "cpu", name: "Processor" },
+    { id: "cpu", name: "CPU" },
     { id: "gpu", name: "Graphics Card" },
     { id: "motherboard", name: "Motherboard" },
     { id: "memory", name: "Memory" },
@@ -32,17 +36,17 @@ const ComponentVisualizerPage = () => {
 
   return (
     <div className="min-h-screen">
+      {/* Header */}
       <header className="bg-black/90 backdrop-blur-sm border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Link to="/builder">
-              <Button
-                className="!bg-white hover:!bg-gray-50 !text-black border border-gray-300"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2 " />
+              <Button className="!bg-white hover:!bg-gray-50 !text-black border border-gray-300">
+                <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Builder
               </Button>
             </Link>
+
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
                 <div className="w-4 h-4 bg-white rounded transform rotate-45"></div>
@@ -52,11 +56,11 @@ const ComponentVisualizerPage = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <span className="text-emerald-500 ">Welcome, {user?.username}</span>
+            <span className="text-emerald-500">Welcome, {displayName}</span>
             <Button
               variant="ghost"
               onClick={logout}
-              className="text-emerald-900  hover:text-black"
+              className="text-emerald-900 hover:text-black"
             >
               Logout
             </Button>
@@ -69,37 +73,37 @@ const ComponentVisualizerPage = () => {
           <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black">
             <Canvas>
               <PerspectiveCamera makeDefault position={[5, 5, 5]} />
-              <OrbitControls
-                enablePan={true}
-                enableZoom={true}
-                enableRotate={true}
-              />
+              <OrbitControls enablePan enableZoom enableRotate />
               <Environment preset="studio" />
               <ambientLight intensity={0.5} />
               <directionalLight position={[10, 10, 5]} intensity={1} />
 
-              <Suspense fallback={null}>
-                <ComponentModel category={selectedCategory} />
-              </Suspense>
+              <R3FErrorBoundary
+                fallback={<FallbackModel category={selectedCategory} />}
+              >
+                <Suspense fallback={null}>
+                  <ComponentModel category={selectedCategory} />
+                </Suspense>
+              </R3FErrorBoundary>
             </Canvas>
           </div>
 
-          <div className="absolute top-4 right-4 space-y-3">
+          <div className="absolute top-4 right-4 space-y-2">
             <Button
               size="sm"
-              className="bg-white hover:bg-gray-100 text-gray-900"
+              className="bg-gray-800 hover:bg-gray-700 text-black"
             >
               <RotateCcw className="w-4 h-4" />
             </Button>
             <Button
               size="sm"
-              className="bg-white hover:bg-gray-100 text-gray-900"
+              className="bg-gray-800 hover:bg-gray-700 text-black"
             >
               <ZoomIn className="w-4 h-4" />
             </Button>
             <Button
               size="sm"
-              className="bg-white hover:bg-gray-100 text-gray-900"
+              className="bg-gray-800 hover:bg-gray-700 text-black"
             >
               <ZoomOut className="w-4 h-4" />
             </Button>

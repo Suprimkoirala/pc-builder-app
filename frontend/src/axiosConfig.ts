@@ -1,6 +1,8 @@
 import axios from "axios";
 
-axios.defaults.baseURL = "http://localhost:8000";
+// Use runtime-configurable API base for Vercel/production; fallback to local dev
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:8000";
+axios.defaults.baseURL = API_BASE_URL;
 axios.defaults.headers.common["Content-Type"] = "application/json";
 
 axios.interceptors.request.use(

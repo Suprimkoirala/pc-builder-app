@@ -14,6 +14,7 @@ import { useBuilderStore } from "../store/builderStore";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import ComponentModel from "../components/3d/ComponentModel";
+import type { SelectedComponent } from "../components/3d/ComponentModel";
 import R3FErrorBoundary from "../components/3d/R3FErrorBoundary";
 import { FallbackModel } from "../components/3d/fallback";
 
@@ -24,7 +25,7 @@ const ComponentVisualizerPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("cpu");
 
   const selected = selectedComponents[selectedCategory];
-  const selectedForModel = selected
+  const selectedForModel: SelectedComponent | null = selected
     ? {
         id: selected.id,
         model: selected.model,

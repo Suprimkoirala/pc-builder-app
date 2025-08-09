@@ -84,7 +84,7 @@ function GLTFPart({ url, scale, position, rotation, tint }: GLTFPartProps) {
   );
 }
 
-interface SelectedComponent {
+export interface SelectedComponent {
   id: string | number;
   model?: string | null | undefined;
   transform?: {

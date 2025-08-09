@@ -85,8 +85,8 @@ function GLTFPart({ url, scale, position, rotation, tint }: GLTFPartProps) {
 }
 
 interface SelectedComponent {
-  id: string;
-  model?: string | null;
+  id: string | number;
+  model?: string | null | undefined;
   transform?: {
     scale?: [number, number, number];
     position?: [number, number, number];
@@ -103,7 +103,7 @@ export default function ComponentModel({ category, selected }: Props) {
   const meshRef = useRef<Mesh>(null);
 
   const tint = useMemo(
-    () => (selected?.id ? colorFromString(selected.id) : undefined),
+    () => (selected?.id !== undefined ? colorFromString(String(selected.id)) : undefined),
     [selected?.id]
   );
 

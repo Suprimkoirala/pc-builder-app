@@ -24,6 +24,13 @@ const ComponentVisualizerPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("cpu");
 
   const selected = selectedComponents[selectedCategory];
+  const selectedForModel = selected
+    ? {
+        id: selected.id,
+        model: selected.model,
+        transform: selected.transform,
+      }
+    : null;
 
   const displayName = user?.username;
 
@@ -88,7 +95,7 @@ const ComponentVisualizerPage = () => {
                   <ComponentModel
                     key={`${selectedCategory}-${selected?.id ?? "none"}`}
                     category={selectedCategory}
-                    selected={selected}
+                    selected={selectedForModel}
                   />
                 </Suspense>
               </R3FErrorBoundary>

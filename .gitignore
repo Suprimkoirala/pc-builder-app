@@ -5,14 +5,10 @@ __pycache__/
 *.pyd
 *.sqlite3
 *.log
-.env
 
 node_modules/
 dist/
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+
 
 .DS_Store
 Thumbs.db

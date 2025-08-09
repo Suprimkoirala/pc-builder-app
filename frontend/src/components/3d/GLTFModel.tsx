@@ -7,7 +7,7 @@ type Props = {
   scale?: [number, number, number];
   position?: [number, number, number];
   rotation?: [number, number, number];
-  tint?: string; // optional color tint to differentiate SKUs using same GLB
+  tint?: string;
 };
 
 export default function GLTFModel({
@@ -17,7 +17,6 @@ export default function GLTFModel({
   rotation,
   tint,
 }: Props) {
-  // cast to any because useGLTF typing varies by loader
   const gltf = useGLTF(url) as unknown as { scene: Group };
 
   useEffect(() => {

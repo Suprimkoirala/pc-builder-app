@@ -9,16 +9,16 @@ export type ModelConfig = {
 
 export const modelRegistry: Record<string, ModelConfig> = {
   motherboard: { url: "/assets/3d/duck.glb", scale: [1.2, 1.2, 1.2], position: [0, 0, 0] },
-  cpu: { url: "/assets/3d/cpu.glb", scale: [0.8, 0.8, 0.8], position: [0, 0, 0] },
-  gpu: { url: "/assets/3d/duck.glb", scale: [1.5, 1, 0.8], position: [0, 0, 0] },
+  cpu: { url: "/models/cpu.glb", scale: [0.8, 0.8, 0.8], position: [0, 0, 0] },
+  gpu: { url: "/assets/3d/duck.glb", scale: [0.6, 1, 0.8], position: [0, 0, 0] },
   memory: { url: "/assets/3d/duck.glb", scale: [0.6, 0.6, 0.6], position: [0, 0, 0] },
   storage: { url: "/assets/3d/duck.glb", scale: [0.8, 0.8, 0.8], position: [0, 0, 0] },
   psu: { url: "/assets/3d/duck.glb", scale: [1, 1, 1], position: [0, 0, 0] },
-  case: { url: "/assets/3d/duck.glb", scale: [1.2, 1.2, 1.2], position: [0, 0, 0] },
+  case: { url: "/assets/3d/duck.glb", scale: [0.6, 0.6, 0.6], position: [0, 0, 0] },
   cooling: { url: "/assets/3d/duck.glb", scale: [0.9, 0.9, 0.9], position: [0, 0, 0] },
 }
 
-// Optionally preload all default models to speed up switching
+
 Object.values(modelRegistry).forEach((cfg) => {
   try {
     useGLTF.preload(cfg.url)

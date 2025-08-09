@@ -8,7 +8,7 @@ import {
   Environment,
   PerspectiveCamera,
 } from "@react-three/drei";
-import { ArrowLeft, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import { useBuilderStore } from "../store/builderStore";
 import { Button } from "../components/ui/button";
@@ -23,6 +23,8 @@ const ComponentVisualizerPage = () => {
   const { selectedComponents } = useBuilderStore();
   const [selectedCategory, setSelectedCategory] = useState<string>("cpu");
 
+  const selected = selectedComponents[selectedCategory];
+
   const displayName = user?.username;
 
   const categories = [
@@ -32,11 +34,12 @@ const ComponentVisualizerPage = () => {
     { id: "memory", name: "Memory" },
     { id: "storage", name: "Storage" },
     { id: "cooling", name: "Cooling" },
+    { id: "case", name: "Case" },
+    { id: "psu", name: "Power Supply" },
   ];
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <header className="bg-black/90 backdrop-blur-sm border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -82,31 +85,14 @@ const ComponentVisualizerPage = () => {
                 fallback={<FallbackModel category={selectedCategory} />}
               >
                 <Suspense fallback={null}>
-                  <ComponentModel category={selectedCategory} />
+                  <ComponentModel
+                    key={`${selectedCategory}-${selected?.id ?? "none"}`}
+                    category={selectedCategory}
+                    selected={selected}
+                  />
                 </Suspense>
               </R3FErrorBoundary>
             </Canvas>
-          </div>
-
-          <div className="absolute top-4 right-4 space-y-2">
-            <Button
-              size="sm"
-              className="bg-gray-800 hover:bg-gray-700 text-black"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </Button>
-            <Button
-              size="sm"
-              className="bg-gray-800 hover:bg-gray-700 text-black"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </Button>
-            <Button
-              size="sm"
-              className="bg-gray-800 hover:bg-gray-700 text-black"
-            >
-              <ZoomOut className="w-4 h-4" />
-            </Button>
           </div>
 
           <div className="absolute bottom-4 left-4 right-4">

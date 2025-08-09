@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF, Box, Sphere, Cylinder } from "@react-three/drei";
 import type { Mesh, MeshStandardMaterial, Object3D } from "three";
-import { useBuilderStore } from "../../store/builderStore";
 
 const CATEGORY_MODEL_MAP: Record<string, string | undefined> = {
   motherboard: "/models/motherboard.glb",
@@ -13,8 +12,8 @@ const CATEGORY_MODEL_MAP: Record<string, string | undefined> = {
   memory: "/models/memory.glb",
   storage: "/models/storage.glb",
   psu: "/models/psu.glb",
-  case: "/models/case.glb",
-  cooling: "/models/cooling.glb",
+  case: "/models/pc_case.glb",
+  cooling: "/models/fan.glb",
 };
 
 const TRANSFORMS: Record<
@@ -25,14 +24,14 @@ const TRANSFORMS: Record<
     rotation?: [number, number, number];
   }
 > = {
-  motherboard: { scale: [1.2, 1.2, 1.2] },
-  cpu: { scale: [0.9, 0.9, 0.9] },
-  gpu: { scale: [1.1, 1.1, 1.1] },
-  memory: { scale: [1, 1, 1] },
-  storage: { scale: [1, 1, 1] },
-  psu: { scale: [1, 1, 1] },
-  case: { scale: [1.2, 1.2, 1.2] },
-  cooling: { scale: [1, 1, 1] },
+  motherboard: { scale: [6.0, 6.0, 6.0] },
+  cpu: { scale: [2.5, 2.5, 2.5] },
+  gpu: { scale: [0.5, 0.5, 0.5] },
+  memory: { scale: [0.9, 0.9, 0.9] },
+  storage: { scale: [0.9, 0.9, 0.9] },
+  psu: { scale: [0.15, 0.15, 0.15] },
+  case: { scale: [6.5, 6.5, 6.5] },
+  cooling: { scale: [0.9, 0.9, 0.9] },
 };
 
 function colorFromString(input: string) {
@@ -41,6 +40,14 @@ function colorFromString(input: string) {
     hash = input.charCodeAt(i) + ((hash << 5) - hash);
   const hue = Math.abs(hash) % 360;
   return `hsl(${hue}, 70%, 55%)`;
+}
+
+// Accept absolute/relative URLs ending in .glb/.gltf
+function isValidModelUrl(v?: string | null) {
+  if (!v) return false;
+  const urlLike = /^([/.]|https?:)/.test(v);
+  const extOk = /\.(glb|gltf)(\?.*)?$/i.test(v);
+  return urlLike && extOk;
 }
 
 type GLTFPartProps = {
@@ -77,19 +84,51 @@ function GLTFPart({ url, scale, position, rotation, tint }: GLTFPartProps) {
   );
 }
 
-interface Props {
-  category: string;
+interface SelectedComponent {
+  id: string;
+  model?: string | null;
+  transform?: {
+    scale?: [number, number, number];
+    position?: [number, number, number];
+    rotation?: [number, number, number];
+  };
 }
 
-export default function ComponentModel({ category }: Props) {
+interface Props {
+  category: string;
+  selected: SelectedComponent | null | undefined;
+}
+
+export default function ComponentModel({ category, selected }: Props) {
   const meshRef = useRef<Mesh>(null);
-  const selected = useBuilderStore((s) => s.selectedComponents[category]);
+
+  const tint = useMemo(
+    () => (selected?.id ? colorFromString(selected.id) : undefined),
+    [selected?.id]
+  );
+
+  const candidate = selected?.model;
+  const url = isValidModelUrl(candidate)
+    ? (candidate as string)
+    : CATEGORY_MODEL_MAP[category];
+  const transform = {
+    ...(TRANSFORMS[category] || {}),
+    ...(selected?.transform || {}),
+  };
+
+  useFrame((_, delta) => {
+    if (meshRef.current) meshRef.current.rotation.y += delta * 0.4;
+  });
+
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[ComponentModel] category=${category} selected=${!!selected} url=`,
+      url
+    );
+  }
 
   if (!selected) {
-    useFrame((_, delta) => {
-      if (meshRef.current) meshRef.current.rotation.y += delta * 0.4;
-    });
-
     switch (category) {
       case "cpu":
         return (
@@ -136,20 +175,7 @@ export default function ComponentModel({ category }: Props) {
     }
   }
 
-  const tint = useMemo(
-    () => (selected?.id ? colorFromString(selected.id) : undefined),
-    [selected?.id]
-  );
-  const url = selected.model || CATEGORY_MODEL_MAP[category];
-  const transform = {
-    ...(TRANSFORMS[category] || {}),
-    ...(selected.transform || {}),
-  };
-
   if (!url) {
-    useFrame((_, delta) => {
-      if (meshRef.current) meshRef.current.rotation.y += delta * 0.4;
-    });
     return (
       <Box ref={meshRef} args={[2, 0.5, 2]} position={[0, 0, 0]}>
         <meshStandardMaterial color={tint || "#9ca3af"} />

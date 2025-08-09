@@ -29,9 +29,13 @@ load_dotenv()
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-secret-key-default')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = (
+    os.getenv('ALLOWED_HOSTS').split(',')
+    if os.getenv('ALLOWED_HOSTS')
+    else ['localhost', '127.0.0.1', '0.0.0.0', '.railway.app']
+)
 
 
 # Application definition
@@ -43,6 +47,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
+    'rest_framework_simplejwt.token_blacklist',
     'pcbuilder',
     'rest_framework', 
 ]
@@ -68,6 +74,7 @@ REST_FRAMEWORK = {
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -113,7 +120,9 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # DATABASE_URL=postgresql://postgres:vmAiMRqvtjkmQixFWmozoGrpTXJgpYvH@metro.proxy.rlwy.net:48137/railway?sslmode=require
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL', 'postgres://postgres:123@localhost:5432/dbms_project')
+        default=os.environ.get('DATABASE_URL', 'postgres://postgres:123@localhost:5432/dbms_project'),
+        conn_max_age=600,
+        ssl_require=True,
     )
 }
 
@@ -152,6 +161,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Honor X-Forwarded-Proto/SSL when behind Railway proxy
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -171,3 +185,10 @@ LOGIN_REDIRECT_URL = '/api/v1/'
 
 # Add CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
+
+# CSRF for hosted frontend and Railway domains
+CSRF_TRUSTED_ORIGINS = (
+    os.getenv('CSRF_TRUSTED_ORIGINS').split(',')
+    if os.getenv('CSRF_TRUSTED_ORIGINS')
+    else ['https://*.railway.app']
+)

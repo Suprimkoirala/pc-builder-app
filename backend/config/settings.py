@@ -10,32 +10,28 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-import os
-from dotenv import load_dotenv
 from pathlib import Path
-from decouple import config
 import dj_database_url
-from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-load_dotenv()
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-secret-key-default')
+SECRET_KEY = 'dev-secret-key-default'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+DEBUG = False
 
-ALLOWED_HOSTS = (
-    os.getenv('ALLOWED_HOSTS').split(',')
-    if os.getenv('ALLOWED_HOSTS')
-    else ['localhost', '127.0.0.1', '0.0.0.0', '.railway.app']
-)
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    'pc-builder-app-production.up.railway.app',
+    '.railway.app',
+]
 
 
 # Application definition
@@ -75,9 +71,9 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -117,10 +113,10 @@ WSGI_APPLICATION = 'config.wsgi.application'
 #     }
 # }
 
-# DATABASE_URL=postgresql://postgres:vmAiMRqvtjkmQixFWmozoGrpTXJgpYvH@metro.proxy.rlwy.net:48137/railway?sslmode=require
+# Use a single remote database (Railway public connection URL)
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL', 'postgres://postgres:123@localhost:5432/dbms_project'),
+    'default': dj_database_url.parse(
+        'postgresql://postgres:vmAiMRqvtjkmQixFWmozoGrpTXJgpYvH@metro.proxy.rlwy.net:48137/railway?sslmode=require',
         conn_max_age=600,
         ssl_require=True,
     )
@@ -187,8 +183,6 @@ LOGIN_REDIRECT_URL = '/api/v1/'
 CORS_ALLOW_ALL_ORIGINS = True
 
 # CSRF for hosted frontend and Railway domains
-CSRF_TRUSTED_ORIGINS = (
-    os.getenv('CSRF_TRUSTED_ORIGINS').split(',')
-    if os.getenv('CSRF_TRUSTED_ORIGINS')
-    else ['https://*.railway.app']
-)
+CSRF_TRUSTED_ORIGINS = [
+    'https://pc-builder-app-production.up.railway.app',
+]

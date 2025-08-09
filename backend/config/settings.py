@@ -10,20 +10,26 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
+from dotenv import load_dotenv
+from pathlib import Path
+from decouple import config
+import dj_database_url
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv()
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-n-tx-a@f1wu7wzn!q(l!eo$#)a^gztic3yys96=dfaarvyt2-l'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-secret-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = []
 
@@ -93,21 +99,22 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'dbms_project',      # database name you just created
+#         'USER': 'postgres',          # PostgreSQL user
+#         'PASSWORD': '123',           # password you enter in pgAdmin
+#         'HOST': 'localhost',         # or '127.0.0.1'
+#         'PORT': '5432',               # PostgreSQL default port
+#     }
+# }
+
+# DATABASE_URL=postgresql://postgres:vmAiMRqvtjkmQixFWmozoGrpTXJgpYvH@metro.proxy.rlwy.net:48137/railway?sslmode=require
 DATABASES = {
-    'default': {
-        # 'ENGINE': 'django.db.backends.postgresql',
-        # 'NAME': 'dbms_project',      # database name you just created
-        # 'USER': 'postgres',          # PostgreSQL user
-        # 'PASSWORD': '123',           # password you enter in pgAdmin
-        # 'HOST': 'localhost',         # or '127.0.0.1'
-        # 'PORT': '5432',               # PostgreSQL default port
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'dbms_project',
-        'USER': 'root',
-        'PASSWORD': 'root',
-        'HOST': 'localhost',
-        'PORT': '3306',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL', 'postgres://postgres:123@localhost:5432/dbms_project')
+    )
 }
 
 

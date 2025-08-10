@@ -1,6 +1,12 @@
 import axios from "axios";
 
-axios.defaults.baseURL = "http://localhost:8000";
+const raw = import.meta.env.VITE_API_BASE_URL as string | undefined;
+const normalized = (() => {
+  const base = (raw || "http://localhost:8000").replace(/\/$/, "");
+  return base;
+})();
+
+axios.defaults.baseURL = normalized;
 axios.defaults.headers.common["Content-Type"] = "application/json";
 
 axios.interceptors.request.use(

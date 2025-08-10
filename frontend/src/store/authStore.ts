@@ -1,7 +1,8 @@
 import { create } from "zustand"
 import axios from "axios"
 
-const API_BASE = "http://localhost:8000/api/v1"
+const API_ROOT = (import.meta as any).env?.VITE_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8000"
+const API_BASE = `${API_ROOT}/api/v1`
 
 interface User {
   id: number
